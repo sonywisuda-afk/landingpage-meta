@@ -1926,6 +1926,22 @@ function updateJamaahFields() {
 // ============================================================
 // SUBMIT FORM
 // ============================================================
+// ============================================================
+// GANTI URL INI dengan URL Google Apps Script Anda
+// ============================================================
+const GSHEET_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbywPNTi75zMCff08soSkfxaNbuQKbOerGKcWwuPSAeDPrWBh1BV79Q3zw6-HqSNonwdWQ/exec';
+
+function kirimKeGoogleSheet(payload) {
+  // Gunakan text/plain agar tidak ada CORS preflight (simple request)
+  // Body tetap JSON string — Apps Script membacanya via e.postData.contents
+  return fetch(GSHEET_SCRIPT_URL, {
+    method : 'POST',
+    mode   : 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body   : JSON.stringify(payload)
+  });
+}
+
 function submitForm() {
   const status = document.getElementById('formStatus');
   const btn    = document.getElementById('submitBtn');
@@ -1968,6 +1984,28 @@ function submitForm() {
 
   const totalBiaya = new Intl.NumberFormat('id-ID').format(count * 1275000);
   const jamaahList = jamaahData.map((j, idx) => `   ${idx+1}. ${j.nama} (${j.tgl} / ${j.usia} thn)`).join('\n');
+
+  // ── Kirim ke Google Sheets (jika URL sudah diisi) ──────────
+  const url = (typeof GSHEET_SCRIPT_URL !== 'undefined') ? GSHEET_SCRIPT_URL : '';
+  if (url && url !== 'GANTI_DENGAN_URL_APPS_SCRIPT_ANDA') {
+    const payload = {
+      waktu        : new Date().toLocaleString('id-ID'),
+      nama         : nama,
+      whatsapp     : wa,
+      email        : email,
+      tglNasabah   : tglNasabah,
+      usiaNasabah  : usiaNasabah,
+      tenor        : tenor,
+      jumlahJamaah : count,
+      jamaah       : jamaahData.map((j,i) => (i+1)+'. '+j.nama+' ('+j.tgl+' / '+j.usia+' thn)').join(' | '),
+      totalBiaya   : count * 1275000,
+      pesan        : pesan
+    };
+    kirimKeGoogleSheet(payload).catch(function(err) {
+      console.warn('[GSheet] Gagal kirim:', err);
+    });
+  }
+  // ───────────────────────────────────────────────────────────
 
   const waMsg =
     'Assalamualaikum, saya ingin mendaftar Dana Talangan Haji.\n\n' +
